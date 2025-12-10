@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. CSS 古都美感設計 ---
+# --- 2. CSS 古都美感設計 (字體顏色修復版) ---
 st.markdown("""
 <style>
     /* ========== 全站主題定義 ========== */
@@ -18,31 +18,41 @@ st.markdown("""
         --brick-red: #8B3A3A;   /* 赤崁紅磚色 */
         --warm-beige: #FFF8F0;  /* 古樸米黃色 */
         --old-wood: #5C3317;    /* 舊木頭色 */
+        --text-dark: #333333;   /* 深灰色 (內文用) */
     }
 
     /* ========== 背景設計 ========== */
     .stApp {
-        background-image: linear-gradient(rgba(255, 248, 240, 0.9), rgba(255, 248, 240, 0.9)), 
+        background-image: linear-gradient(rgba(255, 248, 240, 0.92), rgba(255, 248, 240, 0.92)), 
                           url("https://images.unsplash.com/photo-1605211698552-144e044d895e?q=80&w=2070&auto=format&fit=crop");
         background-size: cover;
         background-attachment: fixed;
         background-position: center;
     }
 
-    /* ========== 文字與標題 ========== */
+    /* ========== 【關鍵修復】強制全站文字顏色 ========== */
+    /* 強制將所有段落、清單、Markdown 文字改成深色，避免被深色模式影響 */
+    .stApp p, .stApp li, .stApp div, .stMarkdown {
+        color: var(--text-dark) !important;
+    }
+    
+    /* 特別針對「輸入框的標題」(如: 項目、付款人) 改成紅磚色 */
+    .stTextInput label, .stNumberInput label, .stTextArea label, .stSelectbox label {
+        color: var(--brick-red) !important;
+        font-weight: bold;
+    }
+
+    /* ========== 標題樣式 ========== */
     h1, h2, h3, h4 {
         color: var(--brick-red) !important;
         font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
         font-weight: bold;
     }
-    .stMarkdown, .stText {
-        color: #4A4A4A;
-    }
 
     /* ========== 按鈕設計 ========== */
     div.stButton > button {
         background-color: var(--warm-beige);
-        color: var(--brick-red);
+        color: var(--brick-red) !important; /* 強制按鈕文字顏色 */
         border: 2px solid var(--brick-red);
         border-radius: 12px;
         padding: 10px 24px;
@@ -53,14 +63,19 @@ st.markdown("""
     }
     div.stButton > button:hover {
         background-color: var(--brick-red);
-        color: var(--warm-beige);
+        color: var(--warm-beige) !important;
         border-color: var(--brick-red);
         box-shadow: 0 4px 8px rgba(139, 58, 58, 0.3);
         transform: translateY(-2px);
     }
+    div.stButton > button p {
+        color: inherit !important; /* 讓按鈕內的文字跟隨按鈕設定 */
+    }
+
+    /* Primary 按鈕特別設定 */
     div.stButton > button[kind="primary"] {
         background-color: var(--brick-red);
-        color: var(--warm-beige);
+        color: var(--warm-beige) !important;
         border: none;
     }
     div.stButton > button[kind="primary"]:hover {
@@ -72,6 +87,7 @@ st.markdown("""
     .stTextInput > div > div > input, .stTextArea > div > div > textarea, .stSelectbox > div > div > div {
         border-color: var(--brick-red);
         background-color: #ffffff;
+        color: var(--text-dark) !important; /* 輸入框內的字也要深色 */
     }
     .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {
         border-color: var(--brick-red);
@@ -94,13 +110,18 @@ st.markdown("""
         margin: 0;
         font-family: "DFKai-SB", "標楷體", serif;
     }
+    
+    /* 修正分帳表格的文字顏色 */
+    div[data-testid="stDataFrame"] {
+        color: var(--text-dark) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🏯 台南旅遊神隊友")
 st.markdown("---")
 
-# 分頁設定 (已更新名稱)
+# 分頁設定
 tab1, tab2, tab3, tab4 = st.tabs(["🥢 時段美食", "🐦 水雉抽籤", "💰 秒速分帳", "🛵 停車紀錄"])
 
 # --- 功能 1: 依時段隨機推薦美食 ---
@@ -146,7 +167,7 @@ with tab1:
         google_url = f"https://www.google.com/search?q=台南+{choice}"
         st.link_button(f"🔍 Google 搜尋「{choice}」", google_url)
 
-# --- 功能 2: 水雉抽籤 (名稱已更新) ---
+# --- 功能 2: 水雉抽籤 ---
 with tab2:
     st.header("🐦 水雉大仙賜籤")
     st.write("呼喚台南市鳥「凌波仙子」，誠心祈求水雉大仙咬出籤王。")
@@ -222,7 +243,10 @@ with tab3:
             avg_cost = total_cost / len(all_people)
             st.markdown(f"""
                 <div style="background-color: var(--warm-beige); padding: 15px; border-radius: 10px; border-left: 5px solid var(--brick-red);">
-                    <h4 style="margin:0;">💰 總金額: <span style="color: var(--brick-red);">${total_cost}</span> | 平均每人: <span style="color: var(--brick-red);">${avg_cost:.1f}</span></h4>
+                    <h4 style="margin:0; color: var(--text-dark) !important;">
+                        💰 總金額: <span style="color: var(--brick-red);">${total_cost}</span> | 
+                        平均每人: <span style="color: var(--brick-red);">${avg_cost:.1f}</span>
+                    </h4>
                 </div>
                 <br>
             """, unsafe_allow_html=True)
@@ -247,6 +271,6 @@ with tab4:
         st.markdown(f"""
         <div class="result-card" style="text-align: left;">
             <h4 style="margin-bottom: 10px;">📍 您的停車紀錄：</h4>
-            <pre style="font-family: inherit; white-space: pre-wrap;">{memo}</pre>
+            <pre style="font-family: inherit; white-space: pre-wrap; color: #5C3317;">{memo}</pre>
         </div>
         """, unsafe_allow_html=True)
