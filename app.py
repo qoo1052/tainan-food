@@ -169,22 +169,25 @@ with tab2:
         else:
             st.warning("還沒輸入店家喔！")
 
-# --- 功能 3: 自動結帳 (最終邏輯修正：比照停車紀錄模式) ---
+# --- 功能 3: 自動結帳 (雙重備份穩定版) ---
 with tab3:
     st.header("💸 自動結帳")
     st.caption("這份帳單會自動存在手機裡，關掉網頁也不怕！")
 
-    # 1. 直接讀取 Cookie 作為資料來源
-    cookie_data = cookie_manager.get(cookie="trip_expenses")
-    
-    current_expenses = []
-    if cookie_data:
-        try:
-            current_expenses = json.loads(cookie_data)
-        except:
-            current_expenses = []
+    # 1. 優先使用 Session State (確保計算區永遠有資料可以算)
+    if 'expenses' not in st.session_state:
+        st.session_state.expenses = []
 
-    # 2. 輸入區
+    # 2. 如果 Session 是空的 (剛打開網頁)，才去讀取 Cookie 救援
+    # 這樣避免了 Cookie 讀太慢導致畫面空白的問題
+    cookie_data = cookie_manager.get(cookie="trip_expenses")
+    if not st.session_state.expenses and cookie_data:
+        try:
+            st.session_state.expenses = json.loads(cookie_data)
+        except:
+            st.session_state.expenses = []
+
+    # 3. 輸入區
     with st.container():
         c1, c2, c3 = st.columns([2, 1, 1])
         with c1: item_name = st.text_input("項目", key="input_item")
@@ -193,15 +196,15 @@ with tab3:
         
         if st.button("➕ 加入清單", use_container_width=True):
             if item_name and payer_name and amount > 0:
-                # 3. 直接修改列表
-                current_expenses.append({
+                # 動作 A: 更新畫面用的變數 (立即反應)
+                st.session_state.expenses.append({
                     "項目": item_name,
                     "付款人": payer_name,
                     "金額": amount
                 })
                 
-                # 4. 存回 Cookie
-                cookie_manager.set("trip_expenses", json.dumps(current_expenses), 
+                # 動作 B: 更新背景 Cookie (存檔用)
+                cookie_manager.set("trip_expenses", json.dumps(st.session_state.expenses), 
                                  expires_at=datetime.now().replace(year=datetime.now().year + 1))
                 
                 st.success(f"已加入: {item_name}")
@@ -212,40 +215,47 @@ with tab3:
 
     st.divider()
     
-    # 5. 顯示區 (直接使用 current_expenses，不依賴 session_state)
-    if current_expenses:
-        df = pd.DataFrame(current_expenses)
+    # 4. 顯示與計算區 (只看 st.session_state，不看 Cookie，保證穩定)
+    if st.session_state.expenses:
+        # 轉換成表格
+        df = pd.DataFrame(st.session_state.expenses)
         
-        # 強制轉型為數字，避免資料錯誤
-        df["金額"] = pd.to_numeric(df["金額"], errors='coerce')
-        df = df.fillna(0)
+        # 安全防護：強制把金額轉成數字，防止當機
+        df["金額"] = pd.to_numeric(df["金額"], errors='coerce').fillna(0)
         
+        # 顯示表格
         st.dataframe(df, use_container_width=True)
         
+        # 開始計算
         total_cost = df["金額"].sum()
-        payers = df.groupby("付款人")["金額"].sum().to_dict()
-        all_people = list(payers.keys())
         
-        if len(all_people) > 0:
-            avg_cost = total_cost / len(all_people)
-            st.markdown(f"""
-                <div class="result-card" style="padding: 15px;">
-                    <h4 style="margin:0;">
-                        💰 總金額: <span style="color: #8B4513;">${total_cost}</span> | 
-                        平均每人: <span style="color: #8B4513;">${avg_cost:.1f}</span>
-                    </h4>
-                </div>
-            """, unsafe_allow_html=True)
-            st.subheader("📊 結算結果：")
-            for person in all_people:
-                paid = payers.get(person, 0)
-                balance = paid - avg_cost
-                if balance > 0: st.success(f"**{person}** 應收回 **${balance:.1f}**")
-                elif balance < 0: st.error(f"**{person}** 應再付 **${abs(balance):.1f}**")
-                else: st.info(f"**{person}** 結清")
+        # 防止只有一筆資料時報錯
+        if not df.empty:
+            payers = df.groupby("付款人")["金額"].sum().to_dict()
+            all_people = list(payers.keys())
+            
+            if len(all_people) > 0:
+                avg_cost = total_cost / len(all_people)
+                st.markdown(f"""
+                    <div class="result-card" style="padding: 15px;">
+                        <h4 style="margin:0;">
+                            💰 總金額: <span style="color: #8B4513;">${total_cost}</span> | 
+                            平均每人: <span style="color: #8B4513;">${avg_cost:.1f}</span>
+                        </h4>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.subheader("📊 結算結果：")
+                for person in all_people:
+                    paid = payers.get(person, 0)
+                    balance = paid - avg_cost
+                    if balance > 0: st.success(f"**{person}** 應收回 **${balance:.1f}**")
+                    elif balance < 0: st.error(f"**{person}** 應再付 **${abs(balance):.1f}**")
+                    else: st.info(f"**{person}** 結清")
         
+        # 5. 清空按鈕
         if st.button("🗑️ 清空所有帳目"):
-            cookie_manager.delete("trip_expenses")
+            st.session_state.expenses = [] # 清畫面
+            cookie_manager.delete("trip_expenses") # 清存檔
             st.rerun()
 
 # --- 功能 4: 停車紀錄 ---
