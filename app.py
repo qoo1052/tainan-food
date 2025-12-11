@@ -169,22 +169,22 @@ with tab2:
         else:
             st.warning("還沒輸入店家喔！")
 
-# --- 功能 3: 自動結帳 (修復錯誤與強化穩定性) ---
+# --- 功能 3: 自動結帳 (最終邏輯修正：比照停車紀錄模式) ---
 with tab3:
     st.header("💸 自動結帳")
     st.caption("這份帳單會自動存在手機裡，關掉網頁也不怕！")
 
-    if 'expenses' not in st.session_state:
-        st.session_state.expenses = []
-
-    # 嘗試從 Cookie 恢復資料
+    # 1. 直接讀取 Cookie 作為資料來源
     cookie_data = cookie_manager.get(cookie="trip_expenses")
-    if cookie_data and not st.session_state.expenses:
+    
+    current_expenses = []
+    if cookie_data:
         try:
-            st.session_state.expenses = json.loads(cookie_data)
+            current_expenses = json.loads(cookie_data)
         except:
-            st.session_state.expenses = []
+            current_expenses = []
 
+    # 2. 輸入區
     with st.container():
         c1, c2, c3 = st.columns([2, 1, 1])
         with c1: item_name = st.text_input("項目", key="input_item")
@@ -193,13 +193,15 @@ with tab3:
         
         if st.button("➕ 加入清單", use_container_width=True):
             if item_name and payer_name and amount > 0:
-                st.session_state.expenses.append({
+                # 3. 直接修改列表
+                current_expenses.append({
                     "項目": item_name,
                     "付款人": payer_name,
                     "金額": amount
                 })
-                # 寫入 Cookie
-                cookie_manager.set("trip_expenses", json.dumps(st.session_state.expenses), 
+                
+                # 4. 存回 Cookie
+                cookie_manager.set("trip_expenses", json.dumps(current_expenses), 
                                  expires_at=datetime.now().replace(year=datetime.now().year + 1))
                 
                 st.success(f"已加入: {item_name}")
@@ -210,20 +212,18 @@ with tab3:
 
     st.divider()
     
-    if st.session_state.expenses:
-        df = pd.DataFrame(st.session_state.expenses)
+    # 5. 顯示區 (直接使用 current_expenses，不依賴 session_state)
+    if current_expenses:
+        df = pd.DataFrame(current_expenses)
         
-        # 【關鍵修復】確保金額欄位是數字，避免出錯
+        # 強制轉型為數字，避免資料錯誤
         df["金額"] = pd.to_numeric(df["金額"], errors='coerce')
-        df = df.fillna(0) # 如果有無法轉換的變成 0
+        df = df.fillna(0)
         
         st.dataframe(df, use_container_width=True)
         
         total_cost = df["金額"].sum()
-        
-        # 【這裡就是原本出錯的地方，已修正】
         payers = df.groupby("付款人")["金額"].sum().to_dict()
-        
         all_people = list(payers.keys())
         
         if len(all_people) > 0:
@@ -245,7 +245,6 @@ with tab3:
                 else: st.info(f"**{person}** 結清")
         
         if st.button("🗑️ 清空所有帳目"):
-            st.session_state.expenses = []
             cookie_manager.delete("trip_expenses")
             st.rerun()
 
