@@ -103,10 +103,11 @@ st.markdown("""
 st.title("🏯 台南旅遊神隊友")
 st.markdown("---")
 
-# 初始化 Cookie 管理器 (這是記憶功能的關鍵)
+# 初始化 Cookie 管理器
 cookie_manager = stx.CookieManager()
 
-tab1, tab2, tab3, tab4 = st.tabs(["🥢 時段美食", "🐦 水雉抽籤", "💰 秒速分帳", "🛵 停車紀錄"])
+# 【修改 1】這裡的 "水雉抽籤" 改成了 "抽籤決定"
+tab1, tab2, tab3, tab4 = st.tabs(["🥢 時段美食", "🐦 抽籤決定", "💰 秒速分帳", "🛵 停車紀錄"])
 
 # --- 功能 1: 依時段隨機推薦美食 ---
 with tab1:
@@ -134,7 +135,7 @@ with tab1:
     except FileNotFoundError:
         st.error("⚠️ 找不到 food_list.csv 檔案！")
 
-# --- 功能 2: 水雉抽籤 ---
+# --- 功能 2: 抽籤決定 ---
 with tab2:
     st.header("🐦 水雉大仙賜籤")
     st.write("呼喚台南市鳥「凌波仙子」，誠心祈求水雉大仙咬出籤王。")
@@ -171,7 +172,8 @@ with tab2:
 
 # --- 功能 3: 秒速分帳 ---
 with tab3:
-    st.header("💸 散會自動算帳")
+    # 【修改 2】這裡的 "散會自動算帳" 改成了 "自動結帳"
+    st.header("💸 自動結帳")
     if 'expenses' not in st.session_state:
         st.session_state.expenses = []
     
@@ -214,20 +216,16 @@ with tab3:
             st.session_state.expenses = []
             st.rerun()
 
-# --- 功能 4: 停車紀錄 (升級：使用 Cookie 記憶) ---
+# --- 功能 4: 停車紀錄 (Cookie 記憶版) ---
 with tab4:
     st.header("🛵 我的機車停哪？")
     st.caption("現在這個紀錄會存在您的手機瀏覽器裡，關掉網頁也不會消失囉！")
 
-    # 1. 嘗試從 Cookie 讀取歷史資料
-    # Cookie 只能存字串，所以我們用 "|" 符號來分隔不同筆紀錄
     raw_history = cookie_manager.get(cookie="parking_history")
     
-    # 轉換 Cookie 資料回 Python 清單
     history_list = []
     if raw_history:
         try:
-            # 資料格式範例: "2023-10-01 12:00::B1柱子|2023-10-01 10:00::赤崁樓前"
             items = raw_history.split("|")
             for item in items:
                 if "::" in item:
@@ -236,40 +234,27 @@ with tab4:
         except:
             history_list = []
     
-    # 2. 輸入區
     memo_input = st.text_area("輸入現在的停車位置...", height=100, 
                              placeholder="例如：\n新光三越對面\n車牌 123-ABC", key="park_input")
     
-    # 3. 儲存按鈕
     if st.button("📍 鎖定位置並儲存", type="primary"):
         if memo_input:
             now_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-            # 新增到清單最前面
             history_list.insert(0, {"time": now_time, "loc": memo_input})
-            
-            # 只保留最新的 5 筆 (避免 Cookie 太大爆掉)
             history_list = history_list[:5]
-            
-            # 將清單轉回字串格式，準備存入 Cookie
-            # 格式: 時間1::地點1|時間2::地點2
             save_str = "|".join([f"{x['time']}::{x['loc']}" for x in history_list])
-            
-            # 寫入 Cookie (設定過期時間為 7 天)
             cookie_manager.set("parking_history", save_str, expires_at=datetime.now().replace(year=datetime.now().year + 1))
-            
             st.success("已儲存到手機記憶體！")
-            time.sleep(1) # 等待寫入
-            st.rerun()    # 重新整理畫面以顯示最新資料
+            time.sleep(1) 
+            st.rerun()    
         else:
             st.warning("請先輸入內容喔")
 
-    # 4. 顯示歷史紀錄
     st.divider()
     st.subheader("📜 歷史停車足跡 (本機記憶)")
     
     if history_list:
         for record in history_list:
-            # 替換換行符號，避免排版跑掉
             display_loc = record['loc'].replace('\n', '<br>')
             st.markdown(f"""
             <div class="history-card">
@@ -278,7 +263,6 @@ with tab4:
             </div>
             """, unsafe_allow_html=True)
             
-        # 清除按鈕
         if st.button("🗑️ 清除所有停車紀錄"):
             cookie_manager.delete("parking_history")
             st.rerun()
