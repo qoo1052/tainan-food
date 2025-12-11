@@ -100,13 +100,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🏯 台南旅遊神隊友")
+# 【修改 1】標題已更改
+st.title("🏯 台南旅遊小幫手")
 st.markdown("---")
 
 # 初始化 Cookie 管理器
 cookie_manager = stx.CookieManager()
 
-# 【修改 1】這裡的 "水雉抽籤" 改成了 "抽籤決定"
 tab1, tab2, tab3, tab4 = st.tabs(["🥢 時段美食", "🐦 抽籤決定", "💰 秒速分帳", "🛵 停車紀錄"])
 
 # --- 功能 1: 依時段隨機推薦美食 ---
@@ -170,9 +170,8 @@ with tab2:
         else:
             st.warning("還沒輸入店家喔！")
 
-# --- 功能 3: 秒速分帳 ---
+# --- 功能 3: 自動結帳 ---
 with tab3:
-    # 【修改 2】這裡的 "散會自動算帳" 改成了 "自動結帳"
     st.header("💸 自動結帳")
     if 'expenses' not in st.session_state:
         st.session_state.expenses = []
@@ -244,7 +243,9 @@ with tab4:
             history_list = history_list[:5]
             save_str = "|".join([f"{x['time']}::{x['loc']}" for x in history_list])
             cookie_manager.set("parking_history", save_str, expires_at=datetime.now().replace(year=datetime.now().year + 1))
-            st.success("已儲存到手機記憶體！")
+            
+            # 【修改 2】成功訊息已更改
+            st.success("已成功儲存！")
             time.sleep(1) 
             st.rerun()    
         else:
