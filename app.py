@@ -180,7 +180,7 @@ with tab3:
     if 'show_settlement' not in st.session_state:
         st.session_state.show_settlement = False
 
-    # 1. 自動讀取 Cookie (原本的救援按鈕已移除)
+    # 1. 自動讀取 Cookie
     cookie_data = cookie_manager.get(cookie="trip_expenses")
     if cookie_data and not st.session_state.expenses:
         try:
@@ -202,7 +202,6 @@ with tab3:
                     "付款人": payer_name,
                     "金額": amount
                 })
-                # 只要有變動，先隱藏結算結果，避免誤會
                 st.session_state.show_settlement = False
                 
                 cookie_manager.set("trip_expenses", json.dumps(st.session_state.expenses), 
@@ -261,12 +260,11 @@ with tab3:
                 st.session_state.show_settlement = False
                 st.rerun()
             
-            # 5. 防呆刪除機制 (移到右側)
+            # 5. 防呆刪除機制
             st.markdown("<br>", unsafe_allow_html=True)
-            col_space, col_clear = st.columns([1, 1]) # 切分版面，左邊留白，右邊放按鈕
+            col_space, col_clear = st.columns([1, 1])
             
             with col_clear:
-                # 只有當沒有在確認狀態時，才顯示清空按鈕
                 if 'confirm_clear_expense' not in st.session_state:
                     st.session_state.confirm_clear_expense = False
                 
@@ -324,7 +322,9 @@ with tab4:
             st.warning("請先輸入內容喔")
 
     st.divider()
-    st.subheader("📜 歷史停車足跡 (本機記憶)")
+    
+    # 【修改處】這裡已經移除 "(本機記憶)" 字樣
+    st.subheader("📜 歷史停車足跡")
     
     if history_list:
         for record in history_list:
@@ -336,7 +336,6 @@ with tab4:
             </div>
             """, unsafe_allow_html=True)
         
-        # 停車紀錄的防呆刪除
         st.markdown("<br>", unsafe_allow_html=True)
         
         if 'confirm_clear_parking' not in st.session_state:
