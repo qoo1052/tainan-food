@@ -3,6 +3,7 @@ import random
 import pandas as pd
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo  # 引入時區處理模組
 import extra_streamlit_components as stx
 import json
 
@@ -139,7 +140,7 @@ with tab2:
     st.header("🐦 水雉大仙賜籤")
     st.write("呼喚台南市鳥「凌波仙子」，誠心祈求水雉大仙咬出籤王。")
     user_input = st.text_area("輸入候選店家 (每行一間)", height=150, 
-                             placeholder="例如：\n富盛號碗粿\n炸雞洋行\n莉莉水果店")
+                              placeholder="例如：\n富盛號碗粿\n炸雞洋行\n莉莉水果店")
     
     if st.button("🎋 請大仙咬籤！", type="primary"):
         if user_input.strip():
@@ -204,8 +205,10 @@ with tab3:
                 })
                 st.session_state.show_settlement = False
                 
+                # 【修改】這裡的 expires_at 也加入時區設定
+                tw_now = datetime.now(ZoneInfo("Asia/Taipei"))
                 cookie_manager.set("trip_expenses", json.dumps(st.session_state.expenses), 
-                                 expires_at=datetime.now().replace(year=datetime.now().year + 1))
+                                 expires_at=tw_now.replace(year=tw_now.year + 1))
                 st.success(f"已加入: {item_name}")
                 time.sleep(0.5)
                 st.rerun()      
@@ -243,8 +246,7 @@ with tab3:
                     st.markdown(f"""
                         <div class="result-card" style="padding: 15px;">
                             <h4 style="margin:0;">
-                                💰 總金額: <span style="color: #8B4513;">${total_cost}</span> | 
-                                平均每人: <span style="color: #8B4513;">${avg_cost:.1f}</span>
+                                💰 總金額: <span style="color: #8B4513;">${total_cost}</span> | 平均每人: <span style="color: #8B4513;">${avg_cost:.1f}</span>
                             </h4>
                         </div>
                     """, unsafe_allow_html=True)
@@ -306,15 +308,21 @@ with tab4:
             history_list = []
     
     memo_input = st.text_area("輸入現在的停車位置...", height=100, 
-                             placeholder="例如：\n新光三越對面\n車牌 123-ABC", key="park_input")
+                              placeholder="例如：\n新光三越對面\n車牌 123-ABC", key="park_input")
     
     if st.button("📍 鎖定位置並儲存", type="primary"):
         if memo_input:
-            now_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+            # 【修改】這裡的 now_time 加入時區設定
+            now_time = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y-%m-%d %H:%M")
+            
             history_list.insert(0, {"time": now_time, "loc": memo_input})
             history_list = history_list[:5]
             save_str = "|".join([f"{x['time']}::{x['loc']}" for x in history_list])
-            cookie_manager.set("parking_history", save_str, expires_at=datetime.now().replace(year=datetime.now().year + 1))
+            
+            # 【修改】這裡的 expires_at 也加入時區設定
+            tw_now = datetime.now(ZoneInfo("Asia/Taipei"))
+            cookie_manager.set("parking_history", save_str, expires_at=tw_now.replace(year=tw_now.year + 1))
+            
             st.success("已成功儲存！")
             time.sleep(1) 
             st.rerun()    
@@ -323,7 +331,6 @@ with tab4:
 
     st.divider()
     
-    # 【修改處】這裡已經移除 "(本機記憶)" 字樣
     st.subheader("📜 歷史停車足跡")
     
     if history_list:
